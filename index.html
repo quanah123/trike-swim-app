@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trike-Swim Optimization</title>
+    <style>
+        body {
+            background-color: #050a10;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Changed to accommodate scrolling if needed */
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 20px;
+        }
+
+        h1 {
+            text-transform: uppercase;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        /* --- TIME SELECTOR BOX --- */
+        .time-box-container {
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 100;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-color: #1a202c;
+            border: 2px solid #4a5568;
+            color: #fff;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            width: 250px;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        select:hover {
+            border-color: #63b3ed;
+            box-shadow: 0 0 15px rgba(99, 179, 237, 0.3);
+        }
+
+        /* Custom arrow for the dropdown */
+        .select-wrapper {
+            position: relative;
+        }
+        
+        .select-wrapper::after {
+            content: '▼';
+            font-size: 0.8rem;
+            color: #a0aec0;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        /* --- GAUGES --- */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 50px;
+            margin-bottom: 40px;
+        }
+
+        .gauge-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gauge {
+            position: relative;
+            width: 250px;
+            height: 125px;
+            overflow: hidden;
+        }
+
+        .gauge-background {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 270deg,
+                #ff0000 0deg,
+                #ffcc00 60deg,
+                #00ff00 120deg,
+                transparent 180deg
+            );
+            position: absolute;
+            top: 0;
+            left: 0;
+            mask-image: radial-gradient(transparent 65%, black 66%);
+            -webkit-mask-image: radial-gradient(transparent 65%, black 66%);
+            transform: rotate(-90deg);
+            opacity: 0.5;
+        }
+
+        .ticks {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            border: 6px dashed #050a10;
+            box-sizing: border-box;
+            transform: rotate(-90deg);
+        }
+
+        .needle-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            height: 110px;
+            transform-origin: bottom center;
+            transform: rotate(-90deg);
+            transition: transform 1.0s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
