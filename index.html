@@ -12,7 +12,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Changed to accommodate scrolling if needed */
+            justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
             padding-top: 20px;
@@ -57,11 +57,6 @@
             box-shadow: 0 0 15px rgba(99, 179, 237, 0.3);
         }
 
-        /* Custom arrow for the dropdown */
-        .select-wrapper {
-            position: relative;
-        }
-        
         .select-wrapper::after {
             content: '▼';
             font-size: 0.8rem;
@@ -137,3 +132,267 @@
             transform: rotate(-90deg);
             transition: transform 1.0s cubic-bezier(0.4, 0.0, 0.2, 1);
         }
+
+        .needle {
+            width: 100%;
+            height: 100%;
+            background: black;
+            border: 1px solid #444;
+            position: relative;
+        }
+
+        .needle::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -8px;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 20px solid black;
+        }
+
+        .pivot {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background: black;
+            border: 1px solid #444;
+            border-radius: 50%;
+            transform: translateX(-50%);
+        }
+
+        .labels {
+            display: flex;
+            justify-content: space-between;
+            width: 280px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #aaa;
+            font-weight: bold;
+        }
+
+        .gauge-title {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-text {
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+
+        .weather-info {
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 20px;
+            background: #0f1520;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Trike-Swim Optimization</h1>
+
+    <div class="time-box-container select-wrapper">
+        <select id="timeSelect" onchange="handleTimeChange()">
+            <option value="0">Loading Time...</option>
+        </select>
+    </div>
+
+    <div class="container">
+        <div class="gauge-wrapper">
+            <div class="gauge">
+                <div class="gauge-background"></div>
+                <div class="ticks"></div>
+                <div class="needle-container" id="needle-trike">
+                    <div class="needle"></div>
+                </div>
+                <div class="pivot"></div>
+            </div>
+            <div class="labels">
+                <span>Sub-Optimal</span>
+                <span>Optimal</span>
+            </div>
+            <div class="gauge-title">TRIKE</div>
+            <div class="status-text" id="text-trike">--</div>
+        </div>
+
+        <div class="gauge-wrapper">
+            <div class="gauge">
+                <div class="gauge-background"></div>
+                <div class="ticks"></div>
+                <div class="needle-container" id="needle-swim">
+                    <div class="needle"></div>
+                </div>
+                <div class="pivot"></div>
+            </div>
+            <div class="labels">
+                <span>Sub-Optimal</span>
+                <span>Optimal</span>
+            </div>
+            <div class="gauge-title">SWIM</div>
+            <div class="status-text" id="text-swim">--</div>
+        </div>
+    </div>
+
+    <div class="weather-info" id="weather-display">
+        Waiting for location...
+    </div>
+
+    <script>
+        let globalWeatherData = {};
+        
+        function calculateScore(current, ideal) {
+            let score = 100;
+
+            if (current.temp < ideal.tempMin) {
+                score -= (ideal.tempMin - current.temp) * 5; 
+            } else if (current.temp > ideal.tempMax) {
+                score -= (current.temp - ideal.tempMax) * 5; 
+            }
+
+            if (current.wind > 20) {
+                score -= (current.wind - 20) * 5; 
+            } else if (current.wind > 15) {
+                score -= (current.wind - 15) * 2; 
+            }
+
+            if (current.humidity > ideal.humMax) {
+                score -= (current.humidity - ideal.humMax) * 2; 
+            }
+
+            return Math.max(0, Math.min(100, score));
+        }
+
+        function updateGauge(elementId, textId, score) {
+            const degrees = (score / 100) * 180 - 90;
+            const needle = document.getElementById(elementId);
+            const text = document.getElementById(textId);
+            
+            needle.style.transform = `rotate(${degrees}deg)`;
+
+            if (score >= 80) {
+                text.innerText = "Optimal";
+                text.style.color = "#00ff00"; 
+            } else if (score >= 40) {
+                text.innerText = "Moderate";
+                text.style.color = "#ffcc00"; 
+            } else {
+                text.innerText = "Sub-Optimal";
+                text.style.color = "#ff0000"; 
+            }
+        }
+
+        function initApp() {
+            const display = document.getElementById('weather-display');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    fetchForecast(position.coords.latitude, position.coords.longitude);
+                }, () => {
+                    display.innerHTML = "Location denied. Enable GPS to see optimization.";
+                });
+            } else {
+                display.innerHTML = "Geolocation not supported.";
+            }
+        }
+
+        async function fetchForecast(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=2`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                globalWeatherData = data.hourly;
+                populateTimeSelect(data.hourly.time);
+                updateDashboard(0); 
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('weather-display').innerText = "Error loading forecast.";
+            }
+        }
+
+        function populateTimeSelect(timeArray) {
+            const select = document.getElementById('timeSelect');
+            select.innerHTML = ""; 
+
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            let startIndex = -1;
+
+            for(let i=0; i<timeArray.length; i++) {
+                const dateObj = new Date(timeArray[i]);
+                if (dateObj.getHours() === currentHour && dateObj.getDate() === now.getDate()) {
+                    startIndex = i;
+                    break;
+                }
+            }
+
+            if (startIndex === -1) startIndex = 0; 
+
+            for (let i = 0; i < 16; i++) {
+                const dataIndex = startIndex + i;
+                if (dataIndex >= timeArray.length) break;
+
+                const option = document.createElement("option");
+                option.value = dataIndex; 
+
+                const dateObj = new Date(timeArray[dataIndex]);
+                let displayTime = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                
+                if (i === 0) {
+                    option.text = `Now (${displayTime})`;
+                } else {
+                    option.text = `+${i} hrs (${displayTime})`;
+                }
+
+                select.appendChild(option);
+            }
+        }
+
+        function handleTimeChange() {
+            const select = document.getElementById('timeSelect');
+            const index = parseInt(select.value);
+            updateDashboard(index);
+        }
+
+        function updateDashboard(index) {
+            const currentConditions = {
+                temp: globalWeatherData.temperature_2m[index],
+                wind: globalWeatherData.wind_speed_10m[index],
+                humidity: globalWeatherData.relative_humidity_2m[index]
+            };
+
+            document.getElementById('weather-display').innerHTML = 
+                `Forecast Conditions: 
+                <span style="color:white; font-weight:bold;">${currentConditions.temp}°F</span> | 
+                Wind: <span style="color:white; font-weight:bold;">${currentConditions.wind} mph</span> | 
+                Hum: <span style="color:white; font-weight:bold;">${currentConditions.humidity}%</span>`;
+
+            const trikeScore = calculateScore(currentConditions, {
+                tempMin: 75, tempMax: 85, humMax: 55
+            });
+            updateGauge('needle-trike', 'text-trike', trikeScore);
+
+            const swimScore = calculateScore(currentConditions, {
+                tempMin: 80, tempMax: 100, humMax: 70
+            });
+            updateGauge('needle-swim', 'text-swim', swimScore);
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
